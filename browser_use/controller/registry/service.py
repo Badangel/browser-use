@@ -3,6 +3,7 @@ import functools
 import inspect
 import logging
 import re
+import time
 from collections.abc import Callable
 from inspect import Parameter, iscoroutinefunction, signature
 from typing import Any, Generic, Optional, TypeVar, Union, get_args, get_origin
@@ -25,10 +26,88 @@ from browser_use.telemetry.views import (
 )
 from browser_use.utils import match_url_with_domain_pattern, time_execution_async
 
+from browser_use.dom.views import DOMElementNode
+
 Context = TypeVar('Context')
 
 logger = logging.getLogger(__name__)
 
+def log_playwright_action(func):
+	@functools.wraps(func)
+	async def wrapper(*args, **kwargs):
+		logger = logging.getLogger("playwright_action")
+		action_type = func.__name__
+		description = func.__doc__ or f"执行 {action_type}"
+		timestamp = int(time.time() * 1000)
+		tab_id = None
+		css_selector = None
+		css_selector_simple = None
+		xpath = None
+		element_tag = None
+		element_text = None
+		# 尝试自动获取 BrowserSession 和 DOMElementNode
+		browser = None
+		params = None
+		element_node = None
+		page_id = None
+		# 通过参数名或类型推断
+		for arg in list(args) + list(kwargs.values()):
+			if isinstance(arg, BrowserSession):
+				browser = arg
+			elif isinstance(arg, DOMElementNode):
+				element_node = arg
+			elif hasattr(arg, 'index') and hasattr(arg, '__class__') and hasattr(arg.__class__, '__annotations__') and 'index' in arg.__class__.__annotations__:
+				params = arg
+			elif hasattr(arg, 'page_id'):
+				page_id = arg.page_id
+		# 采集元素信息（如有index参数）
+		if browser and params and hasattr(params, 'index'):
+			try:
+				element_node = await browser.get_dom_element_by_index(params.index)
+				css_selector_simple = element_node.ccs_selector_simple
+			except Exception:
+				element_node = None
+		if element_node:
+			xpath = getattr(element_node, 'xpath', None)
+			element_tag = getattr(element_node, 'tag_name', None)
+			# cssSelector
+			try:
+				css_selector = browser._enhanced_css_selector_for_element(element_node) if browser else None
+			except Exception:
+				css_selector = None
+			# elementText
+			try:
+				element_text = element_node.get_all_text_till_next_clickable_element(max_depth=2)
+			except Exception:
+				element_text = None
+		# tabId
+		if browser:
+			try:
+				page = await browser.get_current_page()
+				tab_id = id(page)
+			except Exception:
+				tab_id = None
+		try:
+			output = await func(*args, **kwargs)
+			log_data = {
+				"description": description,
+				"output": output,
+				"timestamp": timestamp,
+				"tabId": tab_id,
+				"type": action_type,
+				"cssSelector": css_selector,
+				"ccsSelectorSimple": css_selector_simple,
+				"xpath": xpath,
+				"elementTag": element_tag,
+				"elementText": element_text,
+				"pageId": page_id,
+			}
+			logger.info(f"PlaywrightActionLog: {log_data}")
+			return output
+		except Exception as e:
+			logger.error(f"Error in {func.__name__}: {e}", exc_info=True)
+			raise
+	return wrapper
 
 class Registry(Generic[Context]):
 	"""Service for registering and managing actions"""
@@ -276,6 +355,10 @@ class Registry(Generic[Context]):
 
 			# Normalize the function signature
 			normalized_func, actual_param_model = self._normalize_action_function_signature(func, description, param_model)
+
+			logging.info(f"Registering action decorator: {func.__name__}")
+			# 自动加日志装饰器
+			normalized_func = log_playwright_action(normalized_func)
 
 			action = RegisteredAction(
 				name=func.__name__,

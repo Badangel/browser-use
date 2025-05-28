@@ -399,6 +399,10 @@ class Agent(Generic[Context]):
 	def browser_profile(self) -> BrowserProfile:
 		return self.browser_session.browser_profile
 
+	# async def _load_cookies(self):
+	# 	"""Load cookies from the cookies file"""
+	# 	await self.browser_session.browser_context.load_cookies("cookies.json")
+
 	def _set_message_context(self) -> str | None:
 		if self.tool_calling_method == 'raw':
 			# For raw tool calling, only include actions with no filters initially
@@ -1300,7 +1304,7 @@ class Agent(Generic[Context]):
 		self, max_steps: int = 100, on_step_start: AgentHookFunc | None = None, on_step_end: AgentHookFunc | None = None
 	) -> AgentHistoryList:
 		"""Execute the task with maximum number of steps"""
-
+		#await self._load_cookies()
 		loop = asyncio.get_event_loop()
 		agent_run_error: str | None = None  # Initialize error tracking variable
 		self._force_exit_telemetry_logged = False  # ADDED: Flag for custom telemetry on force exit
@@ -1427,6 +1431,9 @@ class Agent(Generic[Context]):
 					# Extract sensitive data keys if sensitive_data is provided
 					keys = list(self.sensitive_data.keys()) if self.sensitive_data else None
 					# Pass browser and context config to the saving method
+					obj = self.state.history.model_dump()
+					print(f"hoistory Type: {type(obj)}, Value: {obj}")	
+
 					self.state.history.save_as_playwright_script(
 						self.settings.save_playwright_script_path,
 						sensitive_data_keys=keys,

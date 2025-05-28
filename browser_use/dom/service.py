@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from importlib import resources
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
+import time
 
 if TYPE_CHECKING:
 	from playwright.async_api import Page
@@ -97,7 +98,12 @@ class DomService:
 		}
 
 		try:
+			start_time = time.time()  # 记录开始时间
+			logger.info(f"Function evaluate js will execution: {start_time:.6f} seconds")
 			eval_page: dict = await self.page.evaluate(self.js_code, args)
+			end_time = time.time()  # 记录结束时间
+			elapsed_time = end_time - start_time
+			logger.info(f"Function evaluate js execution time: {elapsed_time:.6f} seconds")
 		except Exception as e:
 			logger.error('Error evaluating JavaScript: %s', e)
 			raise
@@ -202,6 +208,7 @@ class DomService:
 		element_node = DOMElementNode(
 			tag_name=node_data['tagName'],
 			xpath=node_data['xpath'],
+			ccs_selector_simple=node_data.get('cssSelectorSimple',''),
 			attributes=node_data.get('attributes', {}),
 			children=[],
 			is_visible=node_data.get('isVisible', False),
