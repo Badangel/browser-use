@@ -2316,3 +2316,9 @@ class BrowserSession(BaseModel):
 			`;
 			document.head.appendChild(style);
 		}""")
+	
+	async def get_simple_css_by_css_selector(self, css_selector: str) -> str:
+		page = await self.get_current_page()
+		dom_service = DomService(page)
+		css_simple = await dom_service.get_simple_css(css_selector)
+		return css_simple

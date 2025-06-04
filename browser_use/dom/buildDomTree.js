@@ -1440,7 +1440,7 @@
       // regardless of viewport status
       if (nodeData.isInViewport || viewportExpansion === -1) {
         nodeData.highlightIndex = highlightIndex++;
-        nodeData.cssSelectorSimple = getCssSelectorSimple(node);
+        //nodeData.cssSelectorSimple = getCssSelectorSimple(node);
 
         if (doHighlightElements) {
           if (focusHighlightIndex >= 0) {

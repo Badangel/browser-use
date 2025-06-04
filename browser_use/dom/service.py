@@ -231,3 +231,6 @@ class DomService:
 		children_ids = node_data.get('children', [])
 
 		return element_node, children_ids
+
+	async def get_simple_css(self, css_selector: str) -> str:
+		return await self._get_css_simple(css_selector)

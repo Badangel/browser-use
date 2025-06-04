@@ -133,7 +133,6 @@ class Controller(Generic[Context]):
 
 			element_node = await browser_session.get_dom_element_by_index(params.index)
 			initial_pages = len(browser_session.tabs)
-
 			# if element has file uploader then dont click
 			if await browser_session.find_file_upload_element_by_index(params.index) is not None:
 				msg = f'Index {params.index} - has an element which opens file upload dialog. To upload files please use a specific function to upload files '

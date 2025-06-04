@@ -32,6 +32,8 @@ Context = TypeVar('Context')
 
 logger = logging.getLogger(__name__)
 
+css_simpe_action_types = ['click_element_by_index','input_text','extract_content']
+
 def log_playwright_action(func):
 	@functools.wraps(func)
 	async def wrapper(*args, **kwargs):
@@ -64,7 +66,7 @@ def log_playwright_action(func):
 		if browser and params and hasattr(params, 'index'):
 			try:
 				element_node = await browser.get_dom_element_by_index(params.index)
-				css_selector_simple = element_node.ccs_selector_simple
+				#css_selector_simple = element_node.ccs_selector_simple
 			except Exception:
 				element_node = None
 		if element_node:
@@ -87,6 +89,12 @@ def log_playwright_action(func):
 				tab_id = id(page)
 			except Exception:
 				tab_id = None
+		# 获取 cssSelectorSimple
+		if browser and action_type in css_simpe_action_types and css_selector:
+			css_selector_simple = await browser.get_simple_css_by_css_selector(css_selector)
+		else:
+			css_selector_simple = None
+
 		try:
 			output = await func(*args, **kwargs)
 			log_data = {
