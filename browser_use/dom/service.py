@@ -32,6 +32,13 @@ class DomService:
 		self.xpath_cache = {}
 
 		self.js_code = resources.files('browser_use.dom').joinpath('buildDomTree.js').read_text()
+		self.js_css_simple_code = resources.files('browser_use.dom').joinpath('cssSimple.js').read_text()
+
+	async def _get_css_simple(self, legacySelector: str) -> str:
+		args = {
+			'cssSelector': legacySelector,
+		}
+		return await self.page.evaluate(self.js_css_simple_code, args)
 
 	# region - Clickable elements
 	@time_execution_async('--get_clickable_elements')
