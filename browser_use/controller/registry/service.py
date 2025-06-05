@@ -52,6 +52,10 @@ def log_playwright_action(func):
 		params = None
 		element_node = None
 		page_id = None
+		wait_sec = None
+		url = None
+		goal = None
+		amount = None
 		# 通过参数名或类型推断
 		for arg in list(args) + list(kwargs.values()):
 			if isinstance(arg, BrowserSession):
@@ -62,6 +66,10 @@ def log_playwright_action(func):
 				params = arg
 			elif hasattr(arg, 'page_id'):
 				page_id = arg.page_id
+			elif hasattr(arg, 'seconds'):
+				wait_sec = arg.seconds
+			elif hasattr(arg,'goal'):
+				goal = arg.goal
 		# 采集元素信息（如有index参数）
 		if browser and params and hasattr(params, 'index'):
 			try:
@@ -69,6 +77,8 @@ def log_playwright_action(func):
 				#css_selector_simple = element_node.ccs_selector_simple
 			except Exception:
 				element_node = None
+		if params and hasattr(params, 'url'):
+			url = params.url
 		if element_node:
 			xpath = getattr(element_node, 'xpath', None)
 			element_tag = getattr(element_node, 'tag_name', None)
@@ -95,6 +105,10 @@ def log_playwright_action(func):
 		else:
 			css_selector_simple = None
 
+		if action_type == 'scroll_down':
+			amount = params.amount if hasattr(params, 'amount') else None
+		if action_type == 'scroll_up':
+			amount = 1-params.amount if hasattr(params, 'amount') else None
 		try:
 			output = await func(*args, **kwargs)
 			log_data = {
@@ -110,6 +124,14 @@ def log_playwright_action(func):
 				"elementText": element_text,
 				"pageId": page_id,
 			}
+			if wait_sec is not None:
+				log_data["waitSec"] = wait_sec
+			if goal is not None:
+				log_data["goal"] = goal
+			if url is not None:
+				log_data["url"] = url
+			if amount is not None:
+				log_data["scrollY"] = amount
 			logger.info(f"PlaywrightActionLog: {log_data}")
 			return output
 		except Exception as e:
